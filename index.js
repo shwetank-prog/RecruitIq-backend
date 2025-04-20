@@ -3,7 +3,7 @@ const pdfParse = require("pdf-parse");
 const cors = require("cors");
 require("dotenv").config();
 
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { GoogleGenAI } = require("@google/genai"); // Updated import
 
 const app = express();
 app.use(cors());
@@ -11,14 +11,12 @@ const port = 3000;
 
 app.use("/api/check", express.raw({ type: "application/pdf", limit: "10mb" }));
 
-// ✅ Gemini setup - specify API version
-console.log('API Key:', process.env.GEMINI_API_KEY); // Check if the key is being loaded correctly
+// ✅ Gemini setup
+console.log('API Key:', process.env.GEMINI_API_KEY);
 
-const genAI = new GoogleGenerativeAI({
+const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
-  apiVersion: "v1",
 });
-
 
 app.post("/api/check", async (req, res) => {
   const jobDescription = req.query.jobDescription;
@@ -49,19 +47,19 @@ Return JSON like:
 }
 `;
 
-    // ✅ Correct model name
-    const model = genAI.getGenerativeModel({ model: "models/gemini-pro" });
+    // ✅ Use ai.models.generateContent
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash", // You were using "gemini-pro" earlier, updating to flash model as per your working code
+      contents: prompt,
+    });
 
-    const result = await model.generateContent(prompt);
-    const output = result.response.text();
-
-    console.log("Raw GPT response:", output);
+    console.log("Raw GPT response:", response.text);
 
     try {
-      const parsed = JSON.parse(output);
+      const parsed = JSON.parse(response.text);
       res.json(parsed);
     } catch {
-      res.status(500).json({ error: "Invalid JSON from Gemini", raw: output });
+      res.status(500).json({ error: "Invalid JSON from Gemini", raw: response.text });
     }
   } catch (err) {
     console.error("❌ Server error:", err);
